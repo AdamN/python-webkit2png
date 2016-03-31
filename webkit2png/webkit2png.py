@@ -152,6 +152,8 @@ class _WebkitRendererHelper(QObject):
         """
         QObject.__init__(self)
 
+        self.__loading_result = None
+
         # Copy properties from parent
         for key,value in parent.__dict__.items():
             setattr(self,key,value)
@@ -301,7 +303,8 @@ class _WebkitRendererHelper(QObject):
         while self.__loading:
             time.sleep(0.1)
             if timeout > 0 and time.time() >= cancelAt:
-                raise RuntimeError("Request timed out on %s" % res)
+                self.logger.warning("Request timed out on %s" % res)
+                break
             while QApplication.hasPendingEvents() and self.__loading:
                 QCoreApplication.processEvents()
 

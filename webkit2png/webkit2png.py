@@ -222,7 +222,7 @@ class _WebkitRendererHelper(QObject):
         on the value of 'grabWholeWindow' is drawn into a QPixmap
         and postprocessed (_post_process_image).
         """
-        self._load_page(res, self.width, self.height, self.timeout)
+        self._load_page(res, self.timeout)
         # Wait for end of timer. In this time, process
         # other outstanding Qt events.
         if self.wait > 0:
@@ -232,6 +232,15 @@ class _WebkitRendererHelper(QObject):
                 time.sleep(0.1)
                 if QApplication.hasPendingEvents():
                     QApplication.processEvents()
+
+        # Set initial viewport (the size of the "window")
+        size = self._page.mainFrame().contentsSize()
+        self.logger.debug("contentsSize: %s x %s", size.width(), size.height())
+        if self.width > 0:
+            size.setWidth(self.width)
+        if self.height > 0:
+            size.setHeight(self.height)
+        self._window.resize(size)
 
         if self.renderTransparentBackground:
             # Another possible drawing solution
@@ -260,7 +269,7 @@ class _WebkitRendererHelper(QObject):
 
         return self._post_process_image(image)
 
-    def _load_page(self, res, width, height, timeout):
+    def _load_page(self, res, timeout):
         """
         This method implements the logic for retrieving and displaying
         the requested page.
@@ -312,16 +321,6 @@ class _WebkitRendererHelper(QObject):
         self.logger.debug("Processing result")
 
         if self.__loading_result == False:
-
-        # Set initial viewport (the size of the "window")
-        size = self._page.mainFrame().contentsSize()
-        if self.logger: self.logger.debug("contentsSize: %s", size)
-        if width > 0:
-            size.setWidth(width)
-        if height > 0:
-            size.setHeight(height)
-
-        self._window.resize(size)
             self.logger.warning("Failed to load %s" % res)
 
     def _post_process_image(self, qImage):

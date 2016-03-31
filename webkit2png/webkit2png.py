@@ -69,6 +69,7 @@ class WebkitRenderer(QObject):
         # Not that your desktop must be large enough for
         # fitting the whole window.
         self.grabWholeWindow = kwargs.get('grabWholeWindow', False)
+        self.elementSelector = kwargs.get('elementSelector', None)
         self.renderTransparentBackground = kwargs.get('renderTransparentBackground', False)
         self.ignoreAlert = kwargs.get('ignoreAlert', True)
         self.ignoreConfirm = kwargs.get('ignoreConfirm', True)
@@ -256,6 +257,26 @@ class _WebkitRendererHelper(QObject):
             painter = QPainter(image)
             painter.setBackgroundMode(Qt.TransparentMode)
             self._page.mainFrame().render(painter)
+            painter.end()
+        elif self.elementSelector:
+            elementAndSize = self.elementSelector(
+                    self._page.mainFrame().documentElement())
+            if isinstance(elementAndSize, tuple):
+                (element, size) = elementAndSize
+            else:
+                (element, size) = (elementAndSize,
+                        elementAndSize.geometry().size())
+            if size.isEmpty():
+                raise RuntimeError("Selected element is empty")
+            else:
+                self.logger.debug("Selected element size: %d x %d",
+                        size.width(),
+                        size.height())
+                self._window.resize(size)
+            image = QImage(size, QImage.Format_ARGB32)
+            image.fill(QColor(255,0,0,0).rgba())
+            painter = QPainter(image)
+            element.render(painter)
             painter.end()
         else:
             if self.grabWholeWindow:

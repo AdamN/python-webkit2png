@@ -285,7 +285,11 @@ class _WebkitRendererHelper(QObject):
             qtUrl = QUrl(url)
 
         # Set the required cookies, if any
-        self.cookieJar = CookieJar(self.cookies, qtUrl)
+        urlWithoutPath = QUrl(qtUrl)
+        # Reset the path to root: QT will only serve the cookie
+        # to the child components of the initial path.
+        urlWithoutPath.setPath("/")
+        self.cookieJar = CookieJar(self.cookies, urlWithoutPath)
         self._page.networkAccessManager().setCookieJar(self.cookieJar)
 
         # Load the page

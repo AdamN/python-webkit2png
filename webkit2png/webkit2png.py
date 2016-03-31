@@ -76,6 +76,7 @@ class WebkitRenderer(QObject):
         self.interruptJavaScript = kwargs.get('interruptJavaScript', True)
         self.encodedUrl = kwargs.get('encodedUrl', False)
         self.cookies = kwargs.get('cookies', [])
+        self.userAgent = kwargs.get('userAgent', 'WebKit2HTML/1.0')
 
         # Set some default options for QWebPage
         self.qWebSettings = {
@@ -178,7 +179,7 @@ class _WebkitRendererHelper(QObject):
         # Create and connect required PyQt4 objects
         self._page = CustomWebPage(logger=self.logger, ignore_alert=self.ignoreAlert,
             ignore_confirm=self.ignoreConfirm, ignore_prompt=self.ignorePrompt,
-            interrupt_js=self.interruptJavaScript)
+            interrupt_js=self.interruptJavaScript, userAgent=self.userAgent)
         self._page.networkAccessManager().setProxy(proxy)
         self._view = QWebView()
         self._view.setPage(self._page)
@@ -386,6 +387,10 @@ class CustomWebPage(QWebPage):
         self.ignore_confirm = kwargs.get('ignore_confirm', True)
         self.ignore_prompt = kwargs.get('ignore_prompt', True)
         self.interrupt_js = kwargs.get('interrupt_js', True)
+        self.userAgent = kwargs['userAgent']
+
+    def userAgentForUrl(self, url):
+        return self.userAgent
 
     def javaScriptAlert(self, frame, message):
         self.logger.debug('Alert: %s', message)

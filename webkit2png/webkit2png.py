@@ -23,6 +23,7 @@
 #  - Add QTcpSocket support to create a "screenshot daemon" that
 #    can handle multiple requests at the same time.
 
+import logging
 import time
 import os
 
@@ -30,6 +31,8 @@ from PyQt4.QtCore import *
 from PyQt4.QtGui import *
 from PyQt4.QtWebKit import *
 from PyQt4.QtNetwork import *
+
+defaultLogger = logging.getLogger("webkit2png")
 
 # Class for Website-Rendering. Uses QWebPage, which
 # requires a running QtGui to work.
@@ -60,8 +63,8 @@ class WebkitRenderer(QObject):
         self.scaleToHeight = kwargs.get('scaleToHeight', 0)
         self.scaleRatio = kwargs.get('scaleRatio', 'keep')
         self.format = kwargs.get('format', 'png')
-        self.logger = kwargs.get('logger', None)
-        
+        self.logger = kwargs.get('logger', defaultLogger)
+
         # Set this to true if you want to capture flash.
         # Not that your desktop must be large enough for
         # fitting the whole window.
@@ -220,7 +223,7 @@ class _WebkitRendererHelper(QObject):
         # Wait for end of timer. In this time, process
         # other outstanding Qt events.
         if self.wait > 0:
-            if self.logger: self.logger.debug("Waiting %d seconds " % self.wait)
+            self.logger.debug("Waiting %d seconds " % self.wait)
             waitToTime = time.time() + self.wait
             while time.time() < waitToTime:
                 if QApplication.hasPendingEvents():
@@ -296,10 +299,9 @@ class _WebkitRendererHelper(QObject):
             while QApplication.hasPendingEvents() and self.__loading:
                 QCoreApplication.processEvents()
 
-        if self.logger: self.logger.debug("Processing result")
+        self.logger.debug("Processing result")
 
         if self.__loading_result == False:
-            if self.logger: self.logger.warning("Failed to load %s" % res)
 
         # Set initial viewport (the size of the "window")
         size = self._page.mainFrame().contentsSize()
@@ -310,6 +312,7 @@ class _WebkitRendererHelper(QObject):
             size.setHeight(height)
 
         self._window.resize(size)
+            self.logger.warning("Failed to load %s" % res)
 
     def _post_process_image(self, qImage):
         """
@@ -341,7 +344,7 @@ class _WebkitRendererHelper(QObject):
         """
         Slot that sets the '__loading' property to true
         """
-        if self.logger: self.logger.debug("loading started")
+        self.logger.debug("loading started")
         self.__loading = True
 
     # Eventhandler for "loadFinished(bool)" signal
@@ -349,7 +352,7 @@ class _WebkitRendererHelper(QObject):
         """Slot that sets the '__loading' property to false and stores
         the result code in '__loading_result'.
         """
-        if self.logger: self.logger.debug("loading finished with result %s", result)
+        self.logger.debug("loading finished with result %s", result)
         self.__loading = False
         self.__loading_result = result
 
@@ -359,7 +362,7 @@ class _WebkitRendererHelper(QObject):
         Slot that writes SSL warnings into the log but ignores them.
         """
         for e in errors:
-            if self.logger: self.logger.warn("SSL: " + e.errorString())
+            self.logger.warning("SSL: " + e.errorString())
         reply.ignoreSslErrors()
 
 
@@ -369,19 +372,19 @@ class CustomWebPage(QWebPage):
     	Class Initializer
     	"""
         super(CustomWebPage, self).__init__()
-        self.logger = kwargs.get('logger', None)
+        self.logger = kwargs.get('logger', defaultLogger)
         self.ignore_alert = kwargs.get('ignore_alert', True)
         self.ignore_confirm = kwargs.get('ignore_confirm', True)
         self.ignore_prompt = kwargs.get('ignore_prompt', True)
         self.interrupt_js = kwargs.get('interrupt_js', True)
 
     def javaScriptAlert(self, frame, message):
-        if self.logger: self.logger.debug('Alert: %s', message)
+        self.logger.debug('Alert: %s', message)
         if not self.ignore_alert:
             return super(CustomWebPage, self).javaScriptAlert(frame, message)
 
     def javaScriptConfirm(self, frame, message):
-        if self.logger: self.logger.debug('Confirm: %s', message)
+        self.logger.debug('Confirm: %s', message)
         if not self.ignore_confirm:
             return super(CustomWebPage, self).javaScriptConfirm(frame, message)
         else:
@@ -398,7 +401,7 @@ class CustomWebPage(QWebPage):
         If the prompt was not cancelled by the user, the implementation should return true and
         the result string must not be null.
         """
-        if self.logger: self.logger.debug('Prompt: %s (%s)' % (message, default))
+        self.logger.debug('Prompt: %s (%s)' % (message, default))
         if not self.ignore_prompt:
             return super(CustomWebPage, self).javaScriptPrompt(frame, message, default, result)
         else:
@@ -409,5 +412,5 @@ class CustomWebPage(QWebPage):
         This function is called when a JavaScript program is running for a long period of time.
         If the user wanted to stop the JavaScript the implementation should return true; otherwise false.
         """
-        if self.logger: self.logger.debug("WebKit ask to interrupt JavaScript")
+        self.logger.debug("WebKit ask to interrupt JavaScript")
         return self.interrupt_js

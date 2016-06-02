@@ -26,10 +26,21 @@
 import time
 import os
 
-from PyQt4.QtCore import *
-from PyQt4.QtGui import *
-from PyQt4.QtWebKit import *
-from PyQt4.QtNetwork import *
+try:
+    from PyQt5.QtCore import *
+    from PyQt5.QtGui import *
+    from PyQt5.QtWebKit import *
+    from PyQt5.QtWebKitWidgets import *
+    from PyQt5.QtNetwork import *
+    from PyQt5.QtWidgets import *
+    PYQT5 = True
+except ImportError:
+    from PyQt4.QtCore import *
+    from PyQt4.QtGui import *
+    from PyQt4.QtWebKit import *
+    from PyQt4.QtNetwork import *
+    PYQT5 = False
+
 
 # Class for Website-Rendering. Uses QWebPage, which
 # requires a running QtGui to work.
@@ -185,10 +196,16 @@ class _WebkitRendererHelper(QObject):
             self._page.settings().setAttribute(key, value)
 
         # Connect required event listeners
-        self.connect(self._page, SIGNAL("loadFinished(bool)"), self._on_load_finished)
-        self.connect(self._page, SIGNAL("loadStarted()"), self._on_load_started)
-        self.connect(self._page.networkAccessManager(), SIGNAL("sslErrors(QNetworkReply *,const QList<QSslError>&)"), self._on_ssl_errors)
-        self.connect(self._page.networkAccessManager(), SIGNAL("finished(QNetworkReply *)"), self._on_each_reply)
+        if PYQT5:
+            self._page.loadFinished.connect(self._on_load_finished)
+            self._page.loadStarted.connect(self._on_load_started)
+            self._page.networkAccessManager().sslErrors.connect(self._on_ssl_errors)
+            self._page.networkAccessManager().finished.connect(self._on_each_reply)
+        else:
+            self.connect(self._page, SIGNAL("loadFinished(bool)"), self._on_load_finished)
+            self.connect(self._page, SIGNAL("loadStarted()"), self._on_load_started)
+            self.connect(self._page.networkAccessManager(), SIGNAL("sslErrors(QNetworkReply *,const QList<QSslError>&)"), self._on_ssl_errors)
+            self.connect(self._page.networkAccessManager(), SIGNAL("finished(QNetworkReply *)"), self._on_each_reply)
 
         # The way we will use this, it seems to be unesseccary to have Scrollbars enabled
         self._page.mainFrame().setScrollBarPolicy(Qt.Horizontal, Qt.ScrollBarAlwaysOff)
@@ -247,9 +264,15 @@ class _WebkitRendererHelper(QObject):
                 # window still has the focus when the screen is
                 # grabbed. This might result in a race condition.
                 self._view.activateWindow()
-                image = QPixmap.grabWindow(self._window.winId())
+                if PYQT5:
+                    image = QScreen.grabWindow(self._window.winId())
+                else:
+                    image = QPixmap.grabWindow(self._window.winId())
             else:
-                image = QPixmap.grabWidget(self._window)
+                if PYQT5:
+                    image = QWidget.grab(self._window)
+                else:
+                    image = QPixmap.grabWidget(self._window)
 
         return self._post_process_image(image)
 

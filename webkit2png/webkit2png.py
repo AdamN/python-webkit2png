@@ -32,11 +32,13 @@ try:
     from PyQt5.QtWebEngineWidgets import *
     from PyQt5.QtNetwork import *
     from PyQt5.QtWidgets import *
+    from PyQt5.QtWebEngineWidgets import QWebEnginePage as ClassWebPage
     PYQT5 = True
 except ImportError:
     from PyQt4.QtCore import *
     from PyQt4.QtGui import *
     from PyQt4.QtWebKit import *
+    from PyQt5.QtWebKit import QWebPage as ClassWebPage
     from PyQt4.QtNetwork import *
     PYQT5 = False
 
@@ -420,7 +422,8 @@ class _WebkitRendererHelper(QObject):
         reply.ignoreSslErrors()
 
 
-class CustomWebPage(QWebEnginePage):
+class CustomWebPage(ClassWebPage):
+
     def __init__(self, **kwargs):
         """
         Class Initializer

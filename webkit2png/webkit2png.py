@@ -38,7 +38,7 @@ except ImportError:
     from PyQt4.QtCore import *
     from PyQt4.QtGui import *
     from PyQt4.QtWebKit import *
-    from PyQt5.QtWebKit import QWebPage as ClassWebPage
+    from PyQt4.QtWebKit import QWebPage as ClassWebPage
     from PyQt4.QtNetwork import *
     PYQT5 = False
 

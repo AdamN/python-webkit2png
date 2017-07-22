@@ -203,7 +203,10 @@ class _WebkitRendererHelper(QObject):
         else:
             self._page.networkAccessManager().setProxy(proxy)
 
-        self._view = QWebEngineView()
+        if PYQT5:
+            self._view = QWebEngineView()
+        else:
+            self._view = QWebView()
         self._view.setPage(self._page)
         self._window = QMainWindow()
         self._window.setCentralWidget(self._view)

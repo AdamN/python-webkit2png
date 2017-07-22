@@ -36,14 +36,16 @@ from optparse import OptionParser
 try:
     from PyQt5.QtCore import *
     from PyQt5.QtGui import *
-    from PyQt5.QtWebKit import *
+    from PyQt5.QtWebEngineWidgets import *
     from PyQt5.QtNetwork import *
     from PyQt5.QtWidgets import *
+    PYQT5 = True
 except ImportError:
     from PyQt4.QtCore import *
     from PyQt4.QtGui import *
     from PyQt4.QtWebKit import *
     from PyQt4.QtNetwork import *
+    PYQT5 = False
 
 
 VERSION="20091224"

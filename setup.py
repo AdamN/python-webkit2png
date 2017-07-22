@@ -1,6 +1,8 @@
+#!/usr/bin/env python
+
 from setuptools import setup, find_packages
 
-version = '0.8.2'
+version = '0.8.3'
 
 description = "Takes snapshot of webpages using Webkit and Qt4"
 long_description = description
@@ -15,6 +17,8 @@ setup(
     author = 'Roland Tapken',
     author_email = 'roland at dau-sicher de',
     packages = ['webkit2png'],
+    zip_safe=True,
+    include_package_data=True,
     package_dir = [],
     classifiers=[
         'Development Status :: 4 - Beta',
@@ -28,6 +32,10 @@ setup(
         'Topic :: Multimedia :: Graphics :: Capture :: Screen Capture',
         'Topic :: Utilities'
     ],
-    scripts = ['scripts/webkit2png'],
+    entry_points = {
+        'console_scripts': [
+            'webkit2png = webkit2png.scripts:main',
+        ]
+    },
 )
 

@@ -33,14 +33,24 @@ import urlparse
 import logging
 from optparse import OptionParser
 
-from PyQt4.QtCore import *
-from PyQt4.QtGui import *
-from PyQt4.QtWebKit import *
-from PyQt4.QtNetwork import *
+try:
+    from PyQt5.QtCore import *
+    from PyQt5.QtGui import *
+    from PyQt5.QtWebEngineWidgets import *
+    from PyQt5.QtNetwork import *
+    from PyQt5.QtWidgets import *
+    PYQT5 = True
+except ImportError:
+    from PyQt4.QtCore import *
+    from PyQt4.QtGui import *
+    from PyQt4.QtWebKit import *
+    from PyQt4.QtNetwork import *
+    PYQT5 = False
+
 
 VERSION="20091224"
 LOG_FILENAME = 'webkit2png.log'
-logger = logging.getLogger('webkit2png');
+logger = logging.getLogger('webkit2png')
 
 def init_qtgui(display=None, style=None, qtargs=None):
     """Initiates the QApplication environment using the given args."""
@@ -67,7 +77,7 @@ def init_qtgui(display=None, style=None, qtargs=None):
     return QApplication(qtargs2)
 
 
-if __name__ == '__main__':
+def main():
     # This code will be executed if this module is run 'as-is'.
 
     # Enable HTTP proxy
@@ -103,7 +113,7 @@ if __name__ == '__main__':
     parser.add_option("-F", "--feature", dest="features", action="append", type="choice",
                       choices=["javascript", "plugins"],
                       help="Enable additional Webkit features ('javascript', 'plugins')", metavar="FEATURE")
-    parser.add_option("-c", "--cookie", dest="cookies", action="append", 
+    parser.add_option("-c", "--cookie", dest="cookies", action="append",
                       help="Add this cookie. Use multiple times for more cookies. Specification is value of a Set-Cookie HTTP response header.", metavar="COOKIE")
     parser.add_option("-w", "--wait", dest="wait", default=0, type="int",
                       help="Time to wait after loading before the screenshot is taken [default: %default]", metavar="SECONDS")
@@ -200,7 +210,7 @@ if __name__ == '__main__':
                 if "plugins" in options.features:
                     renderer.qWebSettings[QWebSettings.PluginsEnabled] = True
 
-            renderer.render_to_file(url=options.url, file_object=options.output)
+            renderer.render_to_file(res=options.url, file_object=options.output)
             options.output.close()
             QApplication.exit(0)
         except RuntimeError, e:
@@ -214,4 +224,7 @@ if __name__ == '__main__':
     signal.signal(signal.SIGINT, signal.SIG_DFL)
 
     QTimer.singleShot(0, __main_qt)
-    sys.exit(app.exec_())
+    return app.exec_()
+
+if __name__ == '__main__':
+    sys.exit(main())

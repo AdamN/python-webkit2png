@@ -26,10 +26,21 @@
 import time
 import os
 
-from PyQt4.QtCore import *
-from PyQt4.QtGui import *
-from PyQt4.QtWebKit import *
-from PyQt4.QtNetwork import *
+try:
+    from PyQt5.QtCore import *
+    from PyQt5.QtGui import *
+    from PyQt5.QtWebEngineWidgets import *
+    from PyQt5.QtNetwork import *
+    from PyQt5.QtWidgets import *
+    from PyQt5.QtWebEngineWidgets import QWebEnginePage as ClassWebPage
+    PYQT5 = True
+except ImportError:
+    from PyQt4.QtCore import *
+    from PyQt4.QtGui import *
+    from PyQt4.QtWebKit import *
+    from PyQt4.QtWebKit import QWebPage as ClassWebPage
+    from PyQt4.QtNetwork import *
+    PYQT5 = False
 
 # Class for Website-Rendering. Uses QWebPage, which
 # requires a running QtGui to work.
@@ -61,7 +72,7 @@ class WebkitRenderer(QObject):
         self.scaleRatio = kwargs.get('scaleRatio', 'keep')
         self.format = kwargs.get('format', 'png')
         self.logger = kwargs.get('logger', None)
-        
+
         # Set this to true if you want to capture flash.
         # Not that your desktop must be large enough for
         # fitting the whole window.
@@ -73,14 +84,25 @@ class WebkitRenderer(QObject):
         self.interruptJavaScript = kwargs.get('interruptJavaScript', True)
         self.encodedUrl = kwargs.get('encodedUrl', False)
         self.cookies = kwargs.get('cookies', [])
+        
+        if PYQT5:
 
-        # Set some default options for QWebPage
-        self.qWebSettings = {
-            QWebSettings.JavascriptEnabled : False,
-            QWebSettings.PluginsEnabled : False,
-            QWebSettings.PrivateBrowsingEnabled : True,
-            QWebSettings.JavascriptCanOpenWindows : False
-        }
+            # Set some default options for QWebPage
+            self.qWebSettings = {
+                QWebEngineSettings.JavascriptEnabled : False,
+                QWebEngineSettings.PluginsEnabled : False,
+                #QWebEngineSettings.PrivateBrowsingEnabled : True,
+                QWebEngineSettings.JavascriptCanOpenWindows : False
+            }
+            
+        else:
+            
+            self.qWebSettings = {
+                QWebSettings.JavascriptEnabled : False,
+                QWebSettings.PluginsEnabled : False,
+                QWebSettings.PrivateBrowsingEnabled : True,
+                QWebSettings.JavascriptCanOpenWindows : False
+            }
 
 
     def render(self, res):
@@ -123,16 +145,16 @@ class WebkitRenderer(QObject):
 
 ## @brief The CookieJar class inherits QNetworkCookieJar to make a couple of functions public.
 class CookieJar(QNetworkCookieJar):
-	def __init__(self, cookies, qtUrl, parent=None):
-		QNetworkCookieJar.__init__(self, parent)
-		for cookie in cookies:
-			QNetworkCookieJar.setCookiesFromUrl(self, QNetworkCookie.parseCookies(QByteArray(cookie)), qtUrl)
+    def __init__(self, cookies, qtUrl, parent=None):
+        QNetworkCookieJar.__init__(self, parent)
+        for cookie in cookies:
+            QNetworkCookieJar.setCookiesFromUrl(self, QNetworkCookie.parseCookies(QByteArray(cookie)), qtUrl)
 
-	def allCookies(self):
-		return QNetworkCookieJar.allCookies(self)
-	
-	def setAllCookies(self, cookieList):
-		QNetworkCookieJar.setAllCookies(self, cookieList)
+    def allCookies(self):
+        return QNetworkCookieJar.allCookies(self)
+
+    def setAllCookies(self, cookieList):
+        QNetworkCookieJar.setAllCookies(self, cookieList)
 
 class _WebkitRendererHelper(QObject):
     """
@@ -174,8 +196,17 @@ class _WebkitRendererHelper(QObject):
         self._page = CustomWebPage(logger=self.logger, ignore_alert=self.ignoreAlert,
             ignore_confirm=self.ignoreConfirm, ignore_prompt=self.ignorePrompt,
             interrupt_js=self.interruptJavaScript)
-        self._page.networkAccessManager().setProxy(proxy)
-        self._view = QWebView()
+        
+        if PYQT5:
+            self._page.networkAccessManager = QNetworkAccessManager()
+            self._page.networkAccessManager.setProxy(proxy)
+        else:
+            self._page.networkAccessManager().setProxy(proxy)
+
+        if PYQT5:
+            self._view = QWebEngineView()
+        else:
+            self._view = QWebView()
         self._view.setPage(self._page)
         self._window = QMainWindow()
         self._window.setCentralWidget(self._view)
@@ -185,15 +216,23 @@ class _WebkitRendererHelper(QObject):
             self._page.settings().setAttribute(key, value)
 
         # Connect required event listeners
-        self.connect(self._page, SIGNAL("loadFinished(bool)"), self._on_load_finished)
-        self.connect(self._page, SIGNAL("loadStarted()"), self._on_load_started)
-        self.connect(self._page.networkAccessManager(), SIGNAL("sslErrors(QNetworkReply *,const QList<QSslError>&)"), self._on_ssl_errors)
-        self.connect(self._page.networkAccessManager(), SIGNAL("finished(QNetworkReply *)"), self._on_each_reply)
+        if PYQT5:
+            self._page.loadFinished.connect(self._on_load_finished)
+            self._page.loadStarted.connect(self._on_load_started)
+            self._page.networkAccessManager.sslErrors.connect(self._on_ssl_errors)
+            self._page.networkAccessManager.finished.connect(self._on_each_reply)
+        else:
+            self.connect(self._page, SIGNAL("loadFinished(bool)"), self._on_load_finished)
+            self.connect(self._page, SIGNAL("loadStarted()"), self._on_load_started)
+            self.connect(self._page.networkAccessManager(), SIGNAL("sslErrors(QNetworkReply *,const QList<QSslError>&)"), self._on_ssl_errors)
+            self.connect(self._page.networkAccessManager(), SIGNAL("finished(QNetworkReply *)"), self._on_each_reply)
+        
+        if not PYQT5:
 
-        # The way we will use this, it seems to be unesseccary to have Scrollbars enabled
-        self._page.mainFrame().setScrollBarPolicy(Qt.Horizontal, Qt.ScrollBarAlwaysOff)
-        self._page.mainFrame().setScrollBarPolicy(Qt.Vertical, Qt.ScrollBarAlwaysOff)
-        self._page.settings().setUserStyleSheetUrl(QUrl("data:text/css,html,body{overflow-y:hidden !important;}"))
+            # The way we will use this, it seems to be unesseccary to have Scrollbars enabled
+            self._page.mainFrame().setScrollBarPolicy(Qt.Horizontal, Qt.ScrollBarAlwaysOff)
+            self._page.mainFrame().setScrollBarPolicy(Qt.Vertical, Qt.ScrollBarAlwaysOff)
+            self._page.settings().setUserStyleSheetUrl(QUrl("data:text/css,html,body{overflow-y:hidden !important;}"))
 
         # Show this widget
         self._window.show()
@@ -239,7 +278,10 @@ class _WebkitRendererHelper(QObject):
 
             painter = QPainter(image)
             painter.setBackgroundMode(Qt.TransparentMode)
-            self._page.mainFrame().render(painter)
+            if PYQT5:
+                self._page.render(painter)
+            else:
+                self._page.mainFrame().render(painter)
             painter.end()
         else:
             if self.grabWholeWindow:
@@ -247,9 +289,15 @@ class _WebkitRendererHelper(QObject):
                 # window still has the focus when the screen is
                 # grabbed. This might result in a race condition.
                 self._view.activateWindow()
-                image = QPixmap.grabWindow(self._window.winId())
+                if PYQT5:
+                    image = QScreen.grabWindow(self._window.winId())
+                else:
+                    image = QPixmap.grabWindow(self._window.winId())
             else:
-                image = QPixmap.grabWidget(self._window)
+                if PYQT5:
+                    image = QWidget.grab(self._window)
+                else:
+                    image = QPixmap.grabWidget(self._window)
 
         return self._post_process_image(image)
 
@@ -282,13 +330,19 @@ class _WebkitRendererHelper(QObject):
 
         # Set the required cookies, if any
         self.cookieJar = CookieJar(self.cookies, qtUrl)
-        self._page.networkAccessManager().setCookieJar(self.cookieJar)
-
-        # Load the page
-        if type(res) == tuple:
-            self._page.mainFrame().setHtml(res[0], qtUrl) # HTML, baseUrl
+        
+        if PYQT5:
+            self._page.networkAccessManager.setCookieJar(self.cookieJar)
+            if type(res) == tuple:
+                self._page.setHtml(res[0], qtUrl) # HTML, baseUrl
+            else:
+                self._page.load(qtUrl)
         else:
-            self._page.mainFrame().load(qtUrl)
+            self._page.networkAccessManager().setCookieJar(self.cookieJar)
+            if type(res) == tuple:
+                self._page.mainFrame().setHtml(res[0], qtUrl) # HTML, baseUrl
+            else:
+                self._page.mainFrame().load(qtUrl)
 
         while self.__loading:
             if timeout > 0 and time.time() >= cancelAt:
@@ -302,14 +356,22 @@ class _WebkitRendererHelper(QObject):
             if self.logger: self.logger.warning("Failed to load %s" % res)
 
         # Set initial viewport (the size of the "window")
-        size = self._page.mainFrame().contentsSize()
+        if PYQT5:
+            size = self._page.contentsSize()
+        else:
+            size = self._page.mainFrame().contentsSize()
+
         if self.logger: self.logger.debug("contentsSize: %s", size)
+
         if width > 0:
             size.setWidth(width)
         if height > 0:
             size.setHeight(height)
 
-        self._window.resize(size)
+        if PYQT5:
+            self._window.resize(int(size.width()), int(size.height()))
+        else:
+            self._window.resize(size)
 
     def _post_process_image(self, qImage):
         """
@@ -363,11 +425,12 @@ class _WebkitRendererHelper(QObject):
         reply.ignoreSslErrors()
 
 
-class CustomWebPage(QWebPage):
+class CustomWebPage(ClassWebPage):
+
     def __init__(self, **kwargs):
-    	"""
-    	Class Initializer
-    	"""
+        """
+        Class Initializer
+        """
         super(CustomWebPage, self).__init__()
         self.logger = kwargs.get('logger', None)
         self.ignore_alert = kwargs.get('ignore_alert', True)

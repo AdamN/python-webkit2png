@@ -11,6 +11,8 @@ Ubuntu
 - Add following packages: ``apt-get install python-qt4 libqt4-webkit xvfb``
 - Install the flash plugin to screenshot Adobe Flash files: ``apt-get install flashplugin-installer``
 
+To use QT5 instead of QT4 add following packages: ``apt-get install python-pyqt5.qtwebkit xvfb``
+
 Automated installation via ```pip```
 -------------------------------------
 - Install pip: ```apt-get install python-pip```

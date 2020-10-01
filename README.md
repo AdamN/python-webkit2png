@@ -5,9 +5,8 @@ About
 ------
 Python script that takes screenshots (browsershots) using webkit
 
-##Installation
-Ubuntu
-------
+## Installation Ubuntu
+------------------------
 - Add following packages: ``apt-get install python-qt4 libqt4-webkit xvfb``
 - Install the flash plugin to screenshot Adobe Flash files: ``apt-get install flashplugin-installer``
 
